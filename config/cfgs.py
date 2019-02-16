@@ -24,7 +24,7 @@ DECAY_STEPS      = 100
 DECAY_RATE       = 0.94
 SHUFFLE_SIZE     = 200
 
-ROOT_DIR         = "/home/aikaka/wqq/segv2"
+ROOT_DIR         = "../"
 train_tfrecord   = "{}/dataset/TFRECORD/{}_train.tfrecords".format(ROOT_DIR, DATASET)
 test_tfrecord    = "{}/dataset/TFRECORD/{}_valid.tfrecords".format(ROOT_DIR, DATASET)
 
