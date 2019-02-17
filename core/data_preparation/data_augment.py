@@ -63,7 +63,7 @@ def random_flip_up_down(img_tensor, gtboxes_and_label):
 def random_distort_color(image):
     """
     """
-    image = tf.image.random_brightness(image, max_delta=20./255.)
+    image = tf.image.random_brightness(image, max_delta=20.)
     image = tf.image.random_saturation(image, lower=0.7, upper=1.3)
     image = tf.image.random_hue(image, max_delta=0.2)
     return image

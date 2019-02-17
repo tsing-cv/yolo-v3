@@ -56,7 +56,6 @@ class Parser(object):
         image        = data_augment.random_blur(image)
         image        = data_augment.random_salt(image)
         image        = data_augment.random_distort_color(image)
-        image        = image / 255. 
         return image, boxes
 
     def encode_gtboxes(self, gt_boxes):
@@ -187,8 +186,9 @@ if __name__ == "__main__":
     for l in range(30):
         image, boxes = sess.run(example)
         image, boxes = image[0], boxes[0]
+        # print (image)
         image = visual_tools.draw_box_cv(image, boxes[:, :4], labels=boxes[:, 4],
                                          directions=None, scores=None,
                                          plus_rgb_mean=False, is_bgr_channel=False)
-        cv2.imshow('1' ,image)
+        cv2.imshow('1' ,np.cast['uint8'](image))
         cv2.waitKey(5000)
