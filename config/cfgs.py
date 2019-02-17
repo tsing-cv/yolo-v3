@@ -24,7 +24,7 @@ DECAY_STEPS      = 100
 DECAY_RATE       = 0.94
 SHUFFLE_SIZE     = 200
 
-ROOT_DIR         = "../"
+ROOT_DIR         = "C:/Users/tsing/yolo-v3"
 train_tfrecord   = "{}/dataset/TFRECORD/{}_train.tfrecords".format(ROOT_DIR, DATASET)
 test_tfrecord    = "{}/dataset/TFRECORD/{}_valid.tfrecords".format(ROOT_DIR, DATASET)
 

@@ -47,13 +47,16 @@ class Parser(object):
         gt_boxes = tf.reshape(gt_boxes, shape=[-1, 5])
         return image, gt_boxes
 
-    def data_augment(self, image, gt_boxes, output_h, output_w):
-        image, boxes = data_augment.random_rot90(image, gt_boxes)
+    def data_augment(self, image, boxes, output_h, output_w):
+        image, boxes = data_augment.random_rot90(image, boxes)
         image, boxes = data_augment.random_flip_left_right(image, boxes)
         image, boxes = data_augment.random_flip_up_down(image, boxes)
-        # image, boxes = data_augment.random_crop(image, boxes)
-        image        = data_augment.random_distort_color(image)
+        image, boxes = data_augment.random_crop(image, boxes)
         image, boxes = data_augment.resize_image_correct_bbox(image, boxes, output_h, output_w)
+        image        = data_augment.random_blur(image)
+        image        = data_augment.random_salt(image)
+        image        = data_augment.random_distort_color(image)
+        image        = image / 255. 
         return image, boxes
 
     def encode_gtboxes(self, gt_boxes):
@@ -170,6 +173,7 @@ class dataset(object):
 
 if __name__ == "__main__":
     import scipy.misc as scm
+    import cv2
     from core.utils import visual_tools
     from config import cfgs
     sess = tf.Session()
@@ -180,10 +184,11 @@ if __name__ == "__main__":
     is_training = tf.placeholder(tf.bool)
     example = trainset.get_next()
 
-    for l in range(10):
+    for l in range(30):
         image, boxes = sess.run(example)
         image, boxes = image[0], boxes[0]
         image = visual_tools.draw_box_cv(image, boxes[:, :4], labels=boxes[:, 4],
                                          directions=None, scores=None,
-                                         plus_rgb_mean=False, is_bgr_channel=True)
-        scm.imshow(image)
+                                         plus_rgb_mean=False, is_bgr_channel=False)
+        cv2.imshow('1' ,image)
+        cv2.waitKey(5000)

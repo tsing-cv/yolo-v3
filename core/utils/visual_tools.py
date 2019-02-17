@@ -58,7 +58,7 @@ def draw_box_cv(img, boxes, labels=None, directions=None, scores=None, plus_rgb_
 
         if labels is not None:
             label = labels[i]
-            if labels[i] <= 0:
+            if labels[i] <= -1:
                 continue
         else:
             label = np.random.choice(range(len(color_map)))
