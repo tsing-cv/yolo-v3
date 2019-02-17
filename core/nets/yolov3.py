@@ -159,12 +159,12 @@ class yolov3(object):
         self.img_size = tf.shape(inputs)[1:3]
         # set batch norm params
         batch_norm_params = {
-            'decay': self._BATCH_NORM_DECAY,
-            'epsilon': 1e-05,
-            'scale': True,
-            'is_training': is_training,
-            'fused': None,  # Use fused batch norm if possible.
-        }
+                        'decay': self._BATCH_NORM_DECAY,
+                        'epsilon': 1e-05,
+                        'scale': True,
+                        'is_training': is_training,
+                        'fused': None,  # Use fused batch norm if possible.
+                    }
 
         # Set activation_fn and parameters for conv2d, batch_norm.
         with slim.arg_scope([slim.conv2d, slim.batch_norm, common._fixed_padding],reuse=reuse):

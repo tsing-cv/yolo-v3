@@ -112,9 +112,11 @@ def random_crop(image, gtboxes_and_label, min_object_covered=0.8, aspect_ratio_r
 def random_blur(image):
     def gaussian_blur(image):
         return cv2.GaussianBlur(image, (15,15), 0)
+    h, w = image.shape.as_list()[: 2]
     image = tf.cond(tf.less(tf.random_uniform(shape=[], minval=0, maxval=1), 0.5),
                                             lambda: tf.py_func(gaussian_blur, [image], tf.float32),
                                             lambda: image)
+    image.set_shape([h, w, 3])
     return image
 
 def random_salt(image, percetage=0.1):
@@ -126,10 +128,11 @@ def random_salt(image, percetage=0.1):
             randY              = np.random.randint(0, image.shape[1]-1)
             image[randX,randY] = np.random.randint(0, 255, [3])
         return image
-
+    h, w = image.shape.as_list()[: 2]
     image = tf.cond(tf.less(tf.random_uniform(shape=[], minval=0, maxval=1), 0.5),
                                             lambda: tf.py_func(pepperand_salt, [image, percetage], tf.float32),
                                             lambda: image)
+    image.set_shape([h, w, 3])
     return image
 
 def resize_image_correct_bbox(image, boxes, image_h, image_w):

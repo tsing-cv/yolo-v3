@@ -28,7 +28,7 @@ class Train():
         tf.logging.set_verbosity(tf.logging.DEBUG)
         self.dataset_batch()
         self.create_clones()
-        self.train()
+        # self.train()
 
     @staticmethod
     def get_update_op():
@@ -77,11 +77,12 @@ class Train():
 
 
     def dataset_batch(self):
-        parser   = Parser(cfgs.IMAGE_H, cfgs.IMAGE_W, np.array(cfgs.ANCHORS), cfgs.NUM_CLASSES)
-        trainset = dataset(parser, cfgs.train_tfrecord, cfgs.BATCH_SIZE, shuffle=cfgs.SHUFFLE_SIZE)
-        testset  = dataset(parser, cfgs.test_tfrecord , cfgs.BATCH_SIZE, shuffle=None)
+        tf.logging.info("Loading dataset >>>\n\tTrain dataset is in {}".format(cfgs.train_tfrecord))
+        parser           = Parser(cfgs.IMAGE_H, cfgs.IMAGE_W, np.array(cfgs.ANCHORS), cfgs.NUM_CLASSES)
+        trainset         = dataset(parser, cfgs.train_tfrecord, cfgs.BATCH_SIZE, shuffle=cfgs.SHUFFLE_SIZE)
+        testset          = dataset(parser, cfgs.test_tfrecord , cfgs.BATCH_SIZE, shuffle=None)
         self.is_training = tf.placeholder(tf.bool)
-        self.example = tf.cond(self.is_training, lambda: trainset.get_next(), lambda: testset.get_next())
+        self.example     = tf.cond(self.is_training, lambda: trainset.get_next(), lambda: testset.get_next())
 
     def create_clones(self):        
         with tf.device('/cpu:0'):
@@ -92,7 +93,6 @@ class Train():
                                                             decay_rate=cfgs.DECAY_RATE, 
                                                             staircase=True)
             optimizer          = tf.train.MomentumOptimizer(self.learning_rate, momentum=0.9, name='Momentum')
-
             tf.summary.scalar('learning_rate', self.learning_rate)
         # place clones
         losses    = 0 # for summary only
@@ -102,18 +102,18 @@ class Train():
             with tf.variable_scope(tf.get_variable_scope(), reuse = reuse):
                 with tf.name_scope('clone_{}'.format(clone_idx)) as clone_scope:
                     with tf.device(gpu) as clone_device:
-                        images, *y_true  = self.example
-                        model            = yolov3.yolov3(cfgs.NUM_CLASSES, cfgs.ANCHORS)
-                        pred_feature_map = model.forward(images, is_training=True)
-                        self.loss        = model.compute_loss(pred_feature_map, y_true)
-                        y_pred           = model.predict(pred_feature_map)
-                        self.total_loss  = self.loss[0] / len(cfgs.gpus)
-                        losses += self.total_loss
+                        self.images, *self.y_true  = self.example
+                        model                      = yolov3.yolov3(cfgs.NUM_CLASSES, cfgs.ANCHORS)
+                        pred_feature_map           = model.forward(self.images, is_training=self.is_training)
+                        self.loss                  = model.compute_loss(pred_feature_map, self.y_true)
+                        self.y_pred                = model.predict(pred_feature_map)
+                        self.total_loss            = self.loss[0] / len(cfgs.gpus)
+                        losses                    += self.total_loss
                         if clone_idx == 0:
                             regularization_loss = self.L2_Regularizer_Loss()
-                            self.total_loss += regularization_loss 
+                            self.total_loss += regularization_loss
                         
-                        tf.summary.scalar("Loss/Losses", regularization_loss)
+                        tf.summary.scalar("Loss/Losses", losses)
                         tf.summary.scalar("Loss/Regular_loss", regularization_loss)
                         tf.summary.scalar("Loss/Total_loss", self.total_loss)
                         tf.summary.scalar("Loss/Loss_xy", self.loss[1])
@@ -172,7 +172,7 @@ class Train():
             is_chief=True, 
             checkpoint_dir=cfgs.checkpoint_path, 
             hooks=[tf.train.StopAtStepHook(last_step=cfgs.max_number_of_steps), 
-                   tf.train.NanTensorHook(self.total_loss),
+                   # tf.train.NanTensorHook(self.total_loss),
                    summary_hook,
                    logging_hook],
             save_checkpoint_steps=1000,
@@ -181,15 +181,20 @@ class Train():
             stop_grace_period_secs=120, 
             log_step_count_steps=cfgs.log_every_n_steps) as mon_sess:
             while not mon_sess.should_stop():
-                _,step = mon_sess.run([self.train_op, self.global_step], feed_dict={self.is_training:True})
+                _,step,y_p,y = mon_sess.run([self.train_op, self.global_step, self.y_pred, self.y_true], feed_dict={self.is_training:True})
+                print (y_p)
                 if step%cfgs.eval_interval == 0:
-                    y_pre,y_gt = sess.run([y_pred, y_true], feed_dict={self.is_training:False})
+                    train_rec_value, train_prec_value = utils.evaluate(y_p,y)
+                    y_pre,y_gt = mon_sess.run([self.y_pred, self.y_true], feed_dict={self.is_training:False})
                     test_rec_value, test_prec_value = utils.evaluate(y_pre,y_gt)
                     tf.logging.info("\n=======================> evaluation result <================================\n")
-                    tf.logging.info("=> EPOCH %10d [TRAIN]:\trecall:%7.4f \tprecision:%7.4f" %(epoch+1, train_rec_value, train_prec_value))
-                    tf.logging.info("=> EPOCH %10d [VALID]:\trecall:%7.4f \tprecision:%7.4f" %(epoch+1, test_rec_value,  test_prec_value))
+                    tf.logging.info("=> STEP %10d [TRAIN]:\trecall:%7.4f \tprecision:%7.4f" %(step+1, train_rec_value, train_prec_value))
+                    tf.logging.info("=> STEP %10d [VALID]:\trecall:%7.4f \tprecision:%7.4f" %(step+1, test_rec_value,  test_prec_value))
                     tf.logging.info("\n=======================> evaluation result <================================\n")
 
 
 if __name__ == "__main__":
-    Train()
+    t = Train()
+    sess = tf.Session()
+    imgs, y = sess.run([t.images, t.y_true], feed_dict={t.is_training:True})
+    print (y)

@@ -17,7 +17,7 @@ TIME    = 20190214
 
 # dataset *******************************************************
 IMAGE_H, IMAGE_W = 416, 416
-BATCH_SIZE       = 16
+BATCH_SIZE       = 2
 EPOCHS           = 2500
 learning_rate    = 0.001 # if Nan, set 0.0005, 0.0001
 DECAY_STEPS      = 100
