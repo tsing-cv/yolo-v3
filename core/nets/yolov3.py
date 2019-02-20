@@ -13,6 +13,7 @@
 
 import tensorflow as tf
 from core.nets import common
+from core.utils import visual_tools
 slim = tf.contrib.slim
 
 class darknet53(object):
@@ -273,7 +274,7 @@ class yolov3(object):
     def loss_layer(self, feature_map_i, y_true, anchors):
         # size in [h, w] format! don't get messed up!
         grid_size = tf.shape(feature_map_i)[1:3]
-        grid_size_ = feature_map_i.shape.as_list()[1:3]
+        grid_size_ = feature_map_i.shape.as_list()[1: 3]
 
         y_true = tf.reshape(y_true, [-1, grid_size_[0], grid_size_[1], 3, 5+self._NUM_CLASSES])
 
@@ -345,7 +346,16 @@ class yolov3(object):
         # shape: [N, 13, 13, 3, 1]
         class_loss = object_mask * tf.nn.sigmoid_cross_entropy_with_logits(labels=y_true[..., 5:], logits=pred_prob_logits)
         class_loss = tf.reduce_sum(class_loss) / N
-
+        # *********************summary image*********************
+        xmin_gt, ymin_gt, xmax_gt, ymax_gt = valid_true_boxes[..., 0] - 0.5*valid_true_boxes[..., 2], \
+                                             valid_true_boxes[..., 1] - 0.5*valid_true_boxes[..., 3], \
+                                             valid_true_boxes[..., 0] + 0.5*valid_true_boxes[..., 2],\
+                                             valid_true_boxes[..., 1] + 0.5*valid_true_boxes[..., 3]
+        # image_with_true_boxes = visual_tools.draw_boxes_with_categories_and_scores_batch(
+        #                                 image=
+        #                                 boxes=tf.stack([xmin_gt, ymin_gt, xmax_gt, ymax_gt], axis=-1),
+        #                                 boxes=)
+        # *******************************************************
         return xy_loss, wh_loss, conf_loss, class_loss
 
     def _broadcast_iou(self, true_box_xy, true_box_wh, pred_box_xy, pred_box_wh):

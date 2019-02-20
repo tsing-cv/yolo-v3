@@ -28,7 +28,7 @@ class Train():
         tf.logging.set_verbosity(tf.logging.DEBUG)
         self.dataset_batch()
         self.create_clones()
-        # self.train()
+        self.train()
 
     @staticmethod
     def get_update_op():
@@ -78,7 +78,7 @@ class Train():
 
     def dataset_batch(self):
         tf.logging.info("Loading dataset >>>\n\tTrain dataset is in {}".format(cfgs.train_tfrecord))
-        parser           = Parser(cfgs.IMAGE_H, cfgs.IMAGE_W, np.array(cfgs.ANCHORS), cfgs.NUM_CLASSES)
+        parser           = Parser(cfgs.IMAGE_H, cfgs.IMAGE_W, cfgs.ANCHORS, cfgs.NUM_CLASSES)
         trainset         = dataset(parser, cfgs.train_tfrecord, cfgs.BATCH_SIZE, shuffle=cfgs.SHUFFLE_SIZE)
         testset          = dataset(parser, cfgs.test_tfrecord , cfgs.BATCH_SIZE, shuffle=None)
         self.is_training = tf.placeholder(tf.bool)
@@ -110,9 +110,11 @@ class Train():
                         self.total_loss            = self.loss[0] / len(cfgs.gpus)
                         losses                    += self.total_loss
                         if clone_idx == 0:
-                            regularization_loss = self.L2_Regularizer_Loss()
-                            self.total_loss += regularization_loss
-                        
+                            regularization_loss = 0.0001*self.L2_Regularizer_Loss()
+                            self.total_loss    += regularization_loss
+                        else:
+                            regularization_loss = 0
+
                         tf.summary.scalar("Loss/Losses", losses)
                         tf.summary.scalar("Loss/Regular_loss", regularization_loss)
                         tf.summary.scalar("Loss/Total_loss", self.total_loss)
@@ -182,7 +184,6 @@ class Train():
             log_step_count_steps=cfgs.log_every_n_steps) as mon_sess:
             while not mon_sess.should_stop():
                 _,step,y_p,y = mon_sess.run([self.train_op, self.global_step, self.y_pred, self.y_true], feed_dict={self.is_training:True})
-                print (y_p)
                 if step%cfgs.eval_interval == 0:
                     train_rec_value, train_prec_value = utils.evaluate(y_p,y)
                     y_pre,y_gt = mon_sess.run([self.y_pred, self.y_true], feed_dict={self.is_training:False})
@@ -194,7 +195,7 @@ class Train():
 
 
 if __name__ == "__main__":
-    t = Train()
-    sess = tf.Session()
-    imgs, y = sess.run([t.images, t.y_true], feed_dict={t.is_training:True})
-    print (y)
+    Train()
+    # sess = tf.Session()
+    # imgs, y = sess.run([t.images, t.y_true], feed_dict={t.is_training:True})
+    # print (y)

@@ -76,16 +76,17 @@ class Parser(object):
                             13:cell szie, 3:number of anchors
                             85: box_centers, box_sizes, confidence, probability
         """
-        num_layers = len(self.anchors) // 3
+        num_layers  = len(self.anchors) // 3
         anchor_mask = [[6,7,8], [3,4,5], [0,1,2]] if num_layers==3 else [[3,4,5], [1,2,3]]
-        grid_sizes = [[self.image_h//x, self.image_w//x] for x in (32, 16, 8)]
+        grid_sizes  = [[self.image_h//x, self.image_w//x] for x in (32, 16, 8)]
 
         box_centers = (gt_boxes[:, 0:2] + gt_boxes[:, 2:4]) / 2 # the center of box
-        box_sizes =    gt_boxes[:, 2:4] - gt_boxes[:, 0:2] # the height and width of box
+        box_sizes   =  gt_boxes[:, 2:4] - gt_boxes[:, 0:2] # the height and width of box
 
         gt_boxes[:, 0:2] = box_centers
         gt_boxes[:, 2:4] = box_sizes
 
+        # [row, col, layer, coords+class]
         y_true_13 = np.zeros(shape=[grid_sizes[0][0], grid_sizes[0][1], 3, 5+self.num_classes], dtype=np.float32)
         y_true_26 = np.zeros(shape=[grid_sizes[1][0], grid_sizes[1][1], 3, 5+self.num_classes], dtype=np.float32)
         y_true_52 = np.zeros(shape=[grid_sizes[2][0], grid_sizes[2][1], 3, 5+self.num_classes], dtype=np.float32)
@@ -117,7 +118,6 @@ class Parser(object):
         for t, n in enumerate(best_anchor):
             for l in range(num_layers):
                 if n not in anchor_mask[l]: continue
-
                 i = np.floor(gt_boxes[t,0]/self.image_w*grid_sizes[l][1]).astype('int32')
                 j = np.floor(gt_boxes[t,1]/self.image_h*grid_sizes[l][0]).astype('int32')
 
@@ -127,7 +127,6 @@ class Parser(object):
                 y_true[l][j, i, k, 0:4] = gt_boxes[t, 0:4]
                 y_true[l][j, i, k,   4] = 1.
                 y_true[l][j, i, k, 5+c] = 1.
-
         return y_true_13, y_true_26, y_true_52
 
     def pipeline(self, serialized_example):
@@ -157,7 +156,7 @@ class dataset(object):
             raise NotImplementedError("No tfrecords found!")
 
         TFRecordDataset = TFRecordDataset.map(map_func = self.parser.pipeline,
-                                              num_parallel_calls = 10)
+                                              num_parallel_calls = 16)
         TFRecordDataset = TFRecordDataset.repeat() if self.repeat else TFRecordDataset
 
         if self.shuffle is not None:
@@ -177,7 +176,7 @@ if __name__ == "__main__":
     from config import cfgs
     sess = tf.Session()
 
-    parser   = Parser(cfgs.IMAGE_H, cfgs.IMAGE_W, np.array(cfgs.ANCHORS), cfgs.NUM_CLASSES, debug=True)
+    parser   = Parser(cfgs.IMAGE_H, cfgs.IMAGE_W, cfgs.ANCHORS, cfgs.NUM_CLASSES, debug=False)
     trainset = dataset(parser, cfgs.train_tfrecord, 1, shuffle=1)
 
     is_training = tf.placeholder(tf.bool)
@@ -196,4 +195,4 @@ if __name__ == "__main__":
     images, *y_true = example
     for i in range(10):
         ims, ys = sess.run([images, y_true])
-        print (ys, '\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
+        print (ys[0], '\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
